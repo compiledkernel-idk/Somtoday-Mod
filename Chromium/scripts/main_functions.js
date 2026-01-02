@@ -3177,6 +3177,9 @@ function onload() {
             }
         });
 
+        // Save scroll position before hiding overflow
+        const savedScrollY = window.scrollY || document.documentElement.scrollTop;
+
         // Close
         id('grade-defender-close').addEventListener('click', () => {
             gameRunning = false;
@@ -3184,7 +3187,9 @@ function onload() {
             id('grade-defender-ui').remove();
             id('grade-defender-close').remove();
             id('grade-defender-gameover').remove();
-            tn('html', 0).style.overflowY = 'auto';
+            tn('html', 0).style.overflowY = 'scroll';
+            // Restore scroll position
+            window.scrollTo(0, savedScrollY);
         });
 
         // Restart
