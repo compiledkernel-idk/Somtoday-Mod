@@ -796,6 +796,13 @@ function onload() {
                         }
                         if (!isNaN(parseFloat(element.children[0].innerHTML))) {
                             countanimation(element.children[0], 0, parseFloat(element.children[0].innerHTML.replace(',', '.')), 2500, 50);
+                            let gradeValue = parseFloat(element.children[0].innerHTML.replace(',', '.'));
+                            if (gradeValue >= 8.0 && i === 0) {
+                                element.closest('sl-resultaat-item').classList.add('mod-grade-glow', 'mod-grade-excellent');
+                                celebrateGrade(gradeValue);
+                            } else if (gradeValue >= 5.5) {
+                                element.closest('sl-resultaat-item').classList.add('mod-grade-glow');
+                            }
                         }
                         element.classList.add('mod-animation-finished');
                         i++;
@@ -803,6 +810,28 @@ function onload() {
                 }
             }
         }
+    }
+
+    let celebrationShown = {};
+    function celebrateGrade(grade) {
+        let gradeKey = grade.toString() + '-' + Date.now().toString().slice(0, -4);
+        if (celebrationShown[gradeKey]) return;
+        celebrationShown[gradeKey] = true;
+
+        startConfetti();
+        setTimeout(stopConfetti, 3000);
+
+        let message = 'Excellent!';
+        if (grade >= 9.5) message = 'Perfect!';
+        else if (grade >= 9.0) message = 'Outstanding!';
+        else if (grade >= 8.5) message = 'Fantastic!';
+
+        let toast = document.createElement('div');
+        toast.className = 'mod-celebration-toast';
+        toast.textContent = message + ' ' + grade.toFixed(1).replace('.', ',');
+        tn('body', 0).appendChild(toast);
+
+        setTimeout(() => toast.remove(), 3500);
     }
 
     // Simple count animation
@@ -1503,7 +1532,11 @@ function onload() {
         tryRemove(id('mod-css-variables'));
         tryRemove(id('mod-css-variables-2'));
         if (get('ui') != 0 || get('backgroundtype') == 'live') {
-            tn('head', 0).insertAdjacentHTML('beforeend', '<style id="mod-css-variables-2">sl-vakgemiddelden sl-dropdown,sl-cijfer-overzicht sl-dropdown{background:var(--bg-neutral-none);margin-top:-5px;margin-bottom:-5px;}' + (get('uiblur') == 0 ? '' : '.nieuw-bericht-form hmy-popup{top:70px !important;left:70px !important;}sl-plaatsingen,.nieuw-bericht-form,sl-header,sl-laatste-resultaat-item,sl-vakresultaat-item,.berichten-lijst,.vakken,' + (get('layout') == '4' ? '' : 'sl-vakresultaten,hmy-geen-data,hmy-switch-group:has(hmy-switch),sl-bericht-detail .header,sl-bericht-nieuw > .titel,') + '.headers-container,.tabs,sl-studiewijzer-week:has(.datum.vandaag),#mod-top-menu,sl-home > * > sl-tab-bar.show,sl-dagen-header,sl-scrollable-title,sl-studiewijzer-weken-header,sl-cijfer-overzicht-voortgang>div,sl-rooster-tijden{backdrop-filter:blur(' + get('uiblur') + 'px);}') + '@media(max-width:767px){sl-laatste-resultaat-item{backdrop-filter:none;}sl-laatsteresultaten{backdrop-filter:blur(' + get('uiblur') + 'px);}}:root, :root.dark.dark {--thinnest-solid-neutral-strong:1px solid transparent !important;--mod-semi-transparant:' + (tn('html', 0).classList.contains('night') ? '#000' : (darkmode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.65)')) + ';--text-weakest:var(--text-weak);--border-neutral-normal:rgba(' + (darkmode ? '55,64,72,0' : '208,214,220,0') + ');' + ((darkmode && get('ui') > 0.9) ? '--text-weak:#fff;' : '') + '--bg-neutral-none:' + (darkmode ? 'rgba(0,0,0,' + (1 - (get('ui') / 100)) + ')' : 'rgba(255,255,255,' + (1 - (get('ui') / 100)) + ')') + ';--bg-neutral-weakest:' + (darkmode ? 'rgba(0, 0, 0, ' + (1 - (get('ui') / 100)) + ')' : 'rgba(255, 255, 255, ' + (1 - (get('ui') / 100)) + ')') + ';}.mod-multi-choice,input:not(:hover):not(:focus):not(.mod-color-textinput):not(.ng-pristine):not(.ng-dirty),textarea:not(:hover):not(:focus):not(.ng-pristine):not(.ng-dirty),.select-selected{border:1px solid rgba(0,0,0,0.1) !important;}hmy-toggle .toggle:not(:has(input:checked)) .slider{border:2px solid rgba(0,0,0,0.1) !important;}sl-rooster sl-dag-header-tab,.periode-icon{background:none !important;}@media (max-width:767px){' + (platform == 'Android' ? 'sl-rooster-item{margin-left:8px;}' : '') + 'sl-vakgemiddelden sl-dropdown,sl-cijfer-overzicht sl-dropdown{margin-top:10px;}}</style>');
+            let glassOpacity = Math.max(0.1, (1 - (get('ui') / 100)) * 0.6);
+            let blurStyles = get('uiblur') == 0 ? '' : '.nieuw-bericht-form hmy-popup{top:70px !important;left:70px !important;}sl-plaatsingen,.nieuw-bericht-form,sl-header,sl-laatste-resultaat-item,sl-vakresultaat-item,.berichten-lijst,.vakken,' + (get('layout') == '4' ? '' : 'sl-vakresultaten,hmy-geen-data,hmy-switch-group:has(hmy-switch),sl-bericht-detail .header,sl-bericht-nieuw > .titel,') + '.headers-container,.tabs,sl-studiewijzer-week:has(.datum.vandaag),#mod-top-menu,sl-home > * > sl-tab-bar.show,sl-dagen-header,sl-scrollable-title,sl-studiewijzer-weken-header,sl-cijfer-overzicht-voortgang>div,sl-rooster-tijden,sl-rooster-item,sl-sidebar-page,sl-sidebar-page > div,.content-container,sl-rooster-item-detail{backdrop-filter:blur(' + get('uiblur') + 'px);-webkit-backdrop-filter:blur(' + get('uiblur') + 'px);}';
+            let roosterStyles = 'sl-rooster-item{background:' + (darkmode ? 'rgba(255,255,255,' + glassOpacity * 0.15 + ')' : 'rgba(255,255,255,' + glassOpacity + ')') + ' !important;border:1px solid ' + (darkmode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)') + ' !important;box-shadow:0 4px 20px rgba(0,0,0,' + (darkmode ? '0.3' : '0.08') + ') !important;transition:transform 0.2s ease,box-shadow 0.2s ease !important;}sl-rooster-item:hover{transform:translateY(-2px) scale(1.01);box-shadow:0 8px 30px rgba(0,0,0,' + (darkmode ? '0.4' : '0.12') + ') !important;}';
+            let sidebarStyles = 'sl-sidebar-page,sl-sidebar-page > div,.content-container{background:' + (darkmode ? 'rgba(255,255,255,' + glassOpacity * 0.12 + ')' : 'rgba(255,255,255,' + glassOpacity * 0.85 + ')') + ' !important;border-left:1px solid ' + (darkmode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)') + ' !important;box-shadow:-4px 0 30px rgba(0,0,0,' + (darkmode ? '0.5' : '0.15') + ') !important;}sl-rooster-item-detail{background:transparent !important;}sl-rooster-item-detail .header{background:' + (darkmode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.6)') + ' !important;border-bottom:1px solid ' + (darkmode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)') + ' !important;}sl-rooster-item-detail .afspraak-header,sl-rooster-item-detail .titel-container{background:transparent !important;}sl-rooster-item-detail .content{background:transparent !important;}sl-rooster-item-detail .inhoud{background:' + (darkmode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.4)') + ' !important;border-radius:12px !important;padding:12px !important;margin-top:8px !important;}sl-rooster-item-detail .blok{background:' + (darkmode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)') + ' !important;border:1px solid ' + (darkmode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.9)') + ' !important;border-radius:12px !important;}sl-rooster-item-detail .huiswerk{background:' + (darkmode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.5)') + ' !important;border-radius:12px !important;padding:12px !important;margin-top:8px !important;}.studiemateriaal-header-btn button{background:' + (darkmode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.5)') + ' !important;border:1px solid ' + (darkmode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.6)') + ' !important;border-radius:8px !important;}sl-rooster-item-detail hmy-tag,sl-rooster-item-detail hmy-internal-tag{background:' + (darkmode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)') + ' !important;border:1px solid ' + (darkmode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)') + ' !important;border-radius:6px !important;}';
+            tn('head', 0).insertAdjacentHTML('beforeend', '<style id="mod-css-variables-2">sl-vakgemiddelden sl-dropdown,sl-cijfer-overzicht sl-dropdown{background:var(--bg-neutral-none);margin-top:-5px;margin-bottom:-5px;}' + blurStyles + roosterStyles + sidebarStyles + '@media(max-width:767px){sl-laatste-resultaat-item{backdrop-filter:none;}sl-laatsteresultaten{backdrop-filter:blur(' + get('uiblur') + 'px);}}:root, :root.dark.dark {--thinnest-solid-neutral-strong:1px solid transparent !important;--mod-semi-transparant:' + (tn('html', 0).classList.contains('night') ? '#000' : (darkmode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.65)')) + ';--text-weakest:var(--text-weak);--border-neutral-normal:rgba(' + (darkmode ? '55,64,72,0' : '208,214,220,0') + ');' + ((darkmode && get('ui') > 0.9) ? '--text-weak:#fff;' : '') + '--bg-neutral-none:' + (darkmode ? 'rgba(0,0,0,' + (1 - (get('ui') / 100)) + ')' : 'rgba(255,255,255,' + (1 - (get('ui') / 100)) + ')') + ';--bg-neutral-weakest:' + (darkmode ? 'rgba(0, 0, 0, ' + (1 - (get('ui') / 100)) + ')' : 'rgba(255, 255, 255, ' + (1 - (get('ui') / 100)) + ')') + ';}.mod-multi-choice,input:not(:hover):not(:focus):not(.mod-color-textinput):not(.ng-pristine):not(.ng-dirty),textarea:not(:hover):not(:focus):not(.ng-pristine):not(.ng-dirty),.select-selected{border:1px solid rgba(0,0,0,0.1) !important;}hmy-toggle .toggle:not(:has(input:checked)) .slider{border:2px solid rgba(0,0,0,0.1) !important;}sl-rooster sl-dag-header-tab,.periode-icon{background:none !important;}@media (max-width:767px){' + (platform == 'Android' ? 'sl-rooster-item{margin-left:8px;}' : '') + 'sl-vakgemiddelden sl-dropdown,sl-cijfer-overzicht sl-dropdown{margin-top:10px;}}</style>');
         }
         // If at least one of the colors is not set to the default value, modify Somtoday color variables
         const purple100 = toBrightnessValue(get('secondarycolor'), 41);
@@ -1965,7 +1998,7 @@ function onload() {
         tryRemove(id('mod-logo-hat'));
         tryRemove(id('mod-logo-inserted'));
         if (get('layout') == 2 || get('layout') == 3 || get('layout') == 5) {
-            const logoHTML = '<div id="mod-logo-wrapper">' + (get('bools').charAt(BOOL_INDEX.MOD_LOGO) == '0' ? getIcon('logo', null, menuColor, ' id="mod-logo"') : window.logo('mod-logo', '" data-clicks="' + (n(id('mod-logo')) ? '0' : id('mod-logo').dataset.clicks), 'var(--action-neutral-normal)')) + '</div>';
+            const logoHTML = '<div id="mod-logo-wrapper" class="mod-logo-container">' + (get('bools').charAt(BOOL_INDEX.MOD_LOGO) == '0' ? getIcon('logo', 'mod-logo-float', menuColor, ' id="mod-logo"') : window.logo('mod-logo', 'mod-logo-float" data-clicks="' + (n(id('mod-logo')) ? '0' : id('mod-logo').dataset.clicks), 'var(--action-neutral-normal)')) + '</div>';
             if (n(id('mod-logo')) && tn('sl-header', 0) && tn('sl-header', 0).getElementsByTagName('sl-tab-bar')[0]) {
                 tn('sl-header', 0).getElementsByTagName('sl-tab-bar')[0].insertAdjacentHTML('afterbegin', logoHTML);
             }
@@ -3141,22 +3174,60 @@ function onload() {
 
     // Grade Defender Minigame
     function gradeDefenderGame() {
-        // Setup canvas
         if (id('grade-defender-canvas')) id('grade-defender-canvas').remove();
         if (id('grade-defender-ui')) id('grade-defender-ui').remove();
         if (id('grade-defender-close')) id('grade-defender-close').remove();
         if (id('grade-defender-gameover')) id('grade-defender-gameover').remove();
+        if (id('grade-defender-shop')) id('grade-defender-shop').remove();
+        if (id('grade-defender-shop-btn')) id('grade-defender-shop-btn').remove();
+
+        const savedData = JSON.parse(get('gradeDefenderData') || '{"coins":0,"highScore":0,"unlockedWeapons":["basic"],"currentWeapon":"basic"}');
 
         tn('body', 0).insertAdjacentHTML('beforeend', `
             <canvas id="grade-defender-canvas" class="active"></canvas>
-            <div id="grade-defender-ui" class="active">Score: <span id="gd-score">0</span> | Levens: <span id="gd-lives">3</span></div>
+            <div id="grade-defender-ui" class="active">
+                <div class="gd-stat">💰 <span id="gd-coins">${savedData.coins}</span></div>
+                <div class="gd-stat">⭐ <span id="gd-score">0</span></div>
+                <div class="gd-stat">❤️ <span id="gd-lives">5</span></div>
+                <div class="gd-stat">🔥 <span id="gd-combo">0</span>x</div>
+                <div class="gd-stat">🎯 <span id="gd-weapon">${savedData.currentWeapon}</span></div>
+            </div>
             <div id="grade-defender-close" class="active">&times;</div>
+            <button id="grade-defender-shop-btn" class="active">🛒 Shop</button>
+            <div id="grade-defender-shop">
+                <h2>Weapon Shop</h2>
+                <div class="shop-items"></div>
+                <button id="shop-close">Close</button>
+            </div>
             <div id="grade-defender-gameover">
                 <h1>GAME OVER</h1>
-                <h3>Je score: <span id="gd-final-score"></span></h3>
-                <div id="grade-defender-restart">Opnieuw</div>
+                <h3>Score: <span id="gd-final-score"></span></h3>
+                <h3>Coins Earned: <span id="gd-coins-earned"></span></h3>
+                <h3>High Score: <span id="gd-high-score">${savedData.highScore}</span></h3>
+                <div id="grade-defender-restart">Play Again</div>
             </div>
         `);
+
+        const weapons = {
+            basic: { name: 'Basic', cost: 0, damage: 1, speed: 10, cooldown: 200, color: '#0099ff' },
+            rapid: { name: 'Rapid Fire', cost: 100, damage: 1, speed: 12, cooldown: 100, color: '#ff9900' },
+            laser: { name: 'Laser', cost: 250, damage: 3, speed: 15, cooldown: 300, color: '#ff0099' },
+            nuke: { name: 'Nuke', cost: 500, damage: 10, speed: 8, cooldown: 800, color: '#9900ff', splash: 100 },
+            rainbow: { name: 'Rainbow', cost: 1000, damage: 5, speed: 20, cooldown: 50, color: 'rainbow', multishot: 3 }
+        };
+
+        const shopItems = id('grade-defender-shop').querySelector('.shop-items');
+        Object.keys(weapons).forEach(key => {
+            const w = weapons[key];
+            const unlocked = savedData.unlockedWeapons.includes(key);
+            shopItems.insertAdjacentHTML('beforeend', `
+                <div class="shop-item ${unlocked ? 'unlocked' : ''}">
+                    <h4>${w.name}</h4>
+                    <p>💰 ${w.cost} | ⚡ DMG: ${w.damage} | 🚀 Speed: ${w.speed}</p>
+                    <button data-weapon="${key}" ${unlocked ? 'disabled' : ''}>${unlocked ? 'Owned' : 'Buy'}</button>
+                </div>
+            `);
+        });
 
         const canvas = id('grade-defender-canvas');
         const ctx = canvas.getContext('2d');
@@ -3164,16 +3235,37 @@ function onload() {
         canvas.height = window.innerHeight;
 
         let score = 0;
-        let lives = 3;
+        let lives = 5;
+        let coins = savedData.coins;
+        let combo = 0;
         let gameRunning = true;
         let enemies = [];
         let projectiles = [];
+        let particles = [];
+        let powerups = [];
         let playerX = canvas.width / 2;
         let lastTime = 0;
         let spawnTimer = 0;
+        let lastShot = 0;
+        let currentWeapon = savedData.currentWeapon;
+        let shake = 0;
 
-        // Assets
-        // Using emoji/text for simplicity
+        // Create player logo image
+        const logoImg = new Image();
+        // Use the logo function to get SVG and encode it for data URL
+        const logoSvg = window.logo(null, 'mod-logo-float', 'var(--action-neutral-normal)');
+        // Need to parse the SVG string to extraction proper dimensions if needed, but for now wrap in base64
+        logoImg.src = 'data:image/svg+xml;base64,' + btoa(logoSvg);
+
+        function saveData() {
+            const data = {
+                coins,
+                highScore: Math.max(score, savedData.highScore),
+                unlockedWeapons: savedData.unlockedWeapons,
+                currentWeapon
+            };
+            set('gradeDefenderData', JSON.stringify(data));
+        }
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -3181,137 +3273,331 @@ function onload() {
         }
         window.addEventListener('resize', resize);
 
-        // Controls
-        canvas.addEventListener('mousemove', (e) => {
-            playerX = e.clientX;
-        });
-        canvas.addEventListener('touchmove', (e) => {
-            playerX = e.touches[0].clientX;
-        });
-        canvas.addEventListener('click', () => {
-            if (gameRunning) {
-                projectiles.push({ x: playerX, y: canvas.height - 60, speed: 10 });
+        canvas.addEventListener('mousemove', (e) => { playerX = e.clientX; });
+        canvas.addEventListener('touchmove', (e) => { playerX = e.touches[0].clientX; e.preventDefault(); });
+
+        function shoot() {
+            if (!gameRunning) return;
+            const now = Date.now();
+            if (now - lastShot < weapons[currentWeapon].cooldown) return;
+            lastShot = now;
+
+            const w = weapons[currentWeapon];
+            if (w.multishot) {
+                for (let i = 0; i < w.multishot; i++) {
+                    const angle = (i - 1) * 0.3;
+                    projectiles.push({
+                        x: playerX,
+                        y: canvas.height - 60,
+                        vx: Math.sin(angle) * 5,
+                        vy: -w.speed,
+                        damage: w.damage,
+                        color: w.color,
+                        splash: w.splash
+                    });
+                }
+            } else {
+                projectiles.push({
+                    x: playerX,
+                    y: canvas.height - 60,
+                    vx: 0,
+                    vy: -w.speed,
+                    damage: w.damage,
+                    color: w.color,
+                    splash: w.splash
+                });
             }
-        });
+        }
 
-        // Save scroll position before hiding overflow
-        const savedScrollY = window.scrollY || document.documentElement.scrollTop;
+        canvas.addEventListener('click', shoot);
+        canvas.addEventListener('touchstart', shoot);
 
-        // Close
         id('grade-defender-close').addEventListener('click', () => {
             gameRunning = false;
+            saveData();
             canvas.remove();
             id('grade-defender-ui').remove();
             id('grade-defender-close').remove();
+            id('grade-defender-shop-btn').remove();
+            id('grade-defender-shop').remove();
             id('grade-defender-gameover').remove();
             tn('html', 0).style.overflowY = 'scroll';
-            // Restore scroll position
-            window.scrollTo(0, savedScrollY);
         });
 
-        // Restart
         id('grade-defender-restart').addEventListener('click', () => {
             score = 0;
-            lives = 3;
+            lives = 5;
+            combo = 0;
             enemies = [];
             projectiles = [];
+            particles = [];
+            powerups = [];
             gameRunning = true;
             id('grade-defender-gameover').classList.remove('active');
+            lastTime = 0;
             requestAnimationFrame(gameLoop);
         });
 
+        id('grade-defender-shop-btn').addEventListener('click', () => {
+            id('grade-defender-shop').classList.toggle('active');
+        });
+
+        id('shop-close').addEventListener('click', () => {
+            id('grade-defender-shop').classList.remove('active');
+        });
+
+        shopItems.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                const weaponKey = e.target.dataset.weapon;
+                const weapon = weapons[weaponKey];
+                if (coins >= weapon.cost && !savedData.unlockedWeapons.includes(weaponKey)) {
+                    coins -= weapon.cost;
+                    savedData.unlockedWeapons.push(weaponKey);
+                    currentWeapon = weaponKey;
+                    e.target.disabled = true;
+                    e.target.textContent = 'Owned';
+                    e.target.parentElement.classList.add('unlocked');
+                    id('gd-coins').textContent = coins;
+                    id('gd-weapon').textContent = weapon.name;
+                    saveData();
+                    createParticles(canvas.width / 2, canvas.height / 2, '#ffd700', 50);
+                }
+            }
+        });
+
         tn('html', 0).style.overflowY = 'hidden';
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1,
+                    color
+                });
+            }
+        }
 
         function gameLoop(timestamp) {
             if (!gameRunning) return;
             const dt = timestamp - lastTime;
             lastTime = timestamp;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            if (shake > 0) {
+                ctx.translate(Math.random() * shake - shake / 2, Math.random() * shake - shake / 2);
+                shake *= 0.9;
+            }
 
-            // Spawn enemies
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Use clearRect for transparency if needed, or fill
+            // Gradient background is handled by CSS now for performance and style (radial gradient)
+            // But we need to clear previous frame
+
+            ctx.restore();
+
             spawnTimer += dt;
-            if (spawnTimer > 1000) { // Spawn every second
+            const spawnRate = Math.max(300, 1000 - score * 2);
+            if (spawnTimer > spawnRate) {
                 const type = Math.random();
-                let text = (Math.floor(Math.random() * 40) + 10) / 10; // 1.0 - 5.0
-                let isBad = true;
-                if (type > 0.8) {
-                    text = (Math.floor(Math.random() * 45) + 55) / 10; // 5.5 - 10.0
+                let text, isBad, worth;
+                if (type > 0.9) {
+                    text = '⭐';
                     isBad = false;
+                    worth = 50;
+                } else if (type > 0.7) {
+                    text = (Math.floor(Math.random() * 45) + 55) / 10;
+                    isBad = false;
+                    worth = 5;
+                } else {
+                    text = (Math.floor(Math.random() * 40) + 10) / 10;
+                    isBad = true;
+                    worth = 10;
                 }
                 enemies.push({
                     x: Math.random() * (canvas.width - 50) + 25,
                     y: -50,
-                    text: text.toFixed(1),
-                    isBad: isBad,
-                    speed: Math.random() * 2 + 1 + (score / 50) // Speed increases with score
+                    text: text.toString(),
+                    isBad,
+                    worth,
+                    health: isBad ? 1 : 1,
+                    maxHealth: isBad ? 1 : 1,
+                    speed: Math.random() * 2 + 1 + (score / 100)
                 });
                 spawnTimer = 0;
             }
 
-            // Update & Draw Projectiles
-            ctx.fillStyle = '#0099ff';
+            if (Math.random() < 0.002 && powerups.length < 2) {
+                const types = ['❤️', '💰', '⚡'];
+                powerups.push({
+                    x: Math.random() * (canvas.width - 50) + 25,
+                    y: -30,
+                    type: types[Math.floor(Math.random() * types.length)],
+                    speed: 2
+                });
+            }
+
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life -= 0.02;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+            ctx.globalAlpha = 1;
+
             for (let i = 0; i < projectiles.length; i++) {
                 let p = projectiles[i];
-                p.y -= p.speed;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.color === 'rainbow') {
+                    const hue = (Date.now() / 10) % 360;
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                } else {
+                    ctx.fillStyle = p.color;
+                }
+
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = ctx.fillStyle;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
                 ctx.fill();
-                if (p.y < 0) {
+                ctx.shadowBlur = 0;
+
+                if (p.y < -10) {
                     projectiles.splice(i, 1);
                     i--;
                 }
             }
 
-            // Update & Draw Enemies
-            ctx.font = 'bold 30px Arial';
+            ctx.font = 'bold 32px Arial';
             ctx.textAlign = 'center';
             for (let i = 0; i < enemies.length; i++) {
                 let e = enemies[i];
                 e.y += e.speed;
 
                 ctx.fillStyle = e.isBad ? '#ff4444' : '#44ff44';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = ctx.fillStyle;
                 ctx.fillText(e.text, e.x, e.y);
+                ctx.shadowBlur = 0;
 
-                // Collision with floor (missed)
+                if (e.health < e.maxHealth) {
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(e.x - 20, e.y - 40, 40, 5);
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(e.x - 20, e.y - 40, 40 * (e.health / e.maxHealth), 5);
+                }
+
                 if (e.y > canvas.height) {
                     enemies.splice(i, 1);
                     i--;
                     if (e.isBad) {
                         lives--;
+                        combo = 0;
+                        shake = 10;
                         id('gd-lives').innerText = lives;
+                        id('gd-combo').innerText = combo;
                         if (lives <= 0) {
                             gameRunning = false;
+                            const coinsEarned = Math.floor(score / 10);
+                            coins += coinsEarned;
+                            savedData.coins = coins;
                             id('grade-defender-gameover').classList.add('active');
-                            id('gd-final-score').innerText = score;
+                            id('gd-final-score').innerText = Math.floor(score);
+                            id('gd-coins-earned').innerText = coinsEarned;
+                            id('gd-high-score').innerText = Math.max(score, savedData.highScore);
+                            saveData();
                         }
                     }
                 }
 
-                // Collision with projectiles
                 for (let j = 0; j < projectiles.length; j++) {
                     let p = projectiles[j];
                     let dist = Math.hypot(p.x - e.x, p.y - e.y);
-                    if (dist < 30) {
-                        // Hit!
-                        projectiles.splice(j, 1);
-                        enemies.splice(i, 1);
-                        i--;
-                        if (e.isBad) {
-                            score += 10;
-                        } else {
-                            score -= 20; // Hit a good grade
+                    if (dist < 35) {
+                        e.health -= p.damage;
+                        createParticles(e.x, e.y, e.isBad ? '#ff4444' : '#44ff44', 10);
+
+                        if (p.splash) {
+                            for (let k = 0; k < enemies.length; k++) {
+                                if (k !== i) {
+                                    let splashDist = Math.hypot(enemies[k].x - e.x, enemies[k].y - e.y);
+                                    if (splashDist < p.splash) {
+                                        enemies[k].health -= p.damage / 2;
+                                        createParticles(enemies[k].x, enemies[k].y, '#ff9900', 5);
+                                    }
+                                }
+                            }
                         }
-                        id('gd-score').innerText = score;
+
+                        projectiles.splice(j, 1);
+
+                        if (e.health <= 0) {
+                            enemies.splice(i, 1);
+                            i--;
+                            if (e.isBad) {
+                                score += e.worth * (1 + combo * 0.1);
+                                combo++;
+                                shake = 3;
+                            } else {
+                                score = Math.max(0, score - 20);
+                                combo = 0;
+                            }
+                            id('gd-score').innerText = Math.floor(score);
+                            id('gd-combo').innerText = combo;
+                            createParticles(e.x, e.y, e.isBad ? '#ffd700' : '#ff4444', 20);
+                        }
                         break;
                     }
                 }
             }
 
-            // Draw Player
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(playerX - 25, canvas.height - 50, 50, 20);
-            ctx.fillRect(playerX - 5, canvas.height - 70, 10, 20);
+            for (let i = 0; i < powerups.length; i++) {
+                let p = powerups[i];
+                p.y += p.speed;
+                ctx.font = 'bold 30px Arial';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(p.type, p.x, p.y);
+
+                if (p.y > canvas.height) {
+                    powerups.splice(i, 1);
+                    i--;
+                    continue;
+                }
+
+                if (Math.hypot(p.x - playerX, p.y - (canvas.height - 50)) < 40) {
+                    if (p.type === '❤️') lives = Math.min(10, lives + 1);
+                    if (p.type === '💰') coins += 10;
+                    if (p.type === '⚡') combo += 5;
+                    createParticles(p.x, p.y, '#ffd700', 30);
+                    id('gd-lives').innerText = lives;
+                    id('gd-coins').innerText = coins;
+                    id('gd-combo').innerText = combo;
+                    powerups.splice(i, 1);
+                    i--;
+                }
+            }
+
+            ctx.save();
+            ctx.translate(playerX, canvas.height - 50);
+            if (logoImg.complete && logoImg.width > 0) {
+                // Draw logo with proper centering
+                ctx.drawImage(logoImg, -30, -30, 60, 60);
+            } else {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-25, 0, 50, 20);
+                ctx.fillRect(-5, -20, 10, 20);
+            }
+            ctx.restore();
 
             requestAnimationFrame(gameLoop);
         }
