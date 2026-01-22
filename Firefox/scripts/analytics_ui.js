@@ -1022,13 +1022,7 @@ async function loadQuickStats() {
  * Initialize analytics UI when on grades page
  */
 function initAnalyticsUI() {
-    // Only init on grades pages
-    const isGradesPage = window.location.href.includes('cijfers') || 
-                         document.querySelector('sl-cijfers, sl-vakgemiddelden');
-    
-    if (isGradesPage && get('bools')?.charAt(BOOL_INDEX.GRADE_ANALYSIS) !== '0') {
-        setTimeout(createQuickAnalyticsWidget, 1000);
-    }
+    // Quick Stats widget disabled - stats now shown in Profiel page
 }
 
 // Add to execution queue

@@ -100,6 +100,1138 @@ function onload() {
         }
     }
 
+    // Add Profiel tab to navigation
+    function addProfielTab() {
+        const tabBar = tn('sl-tab-bar', 0);
+        if (!tabBar || id('mod-profiel-tab')) return;
+        
+        // Find the last tab item to copy its structure
+        const tabItems = tabBar.querySelectorAll('sl-tab-item');
+        if (tabItems.length === 0) return;
+        
+        const lastTab = tabItems[tabItems.length - 1];
+        
+        // Clone the last tab to get the exact same structure and styling
+        const profielTab = lastTab.cloneNode(true);
+        profielTab.id = 'mod-profiel-tab';
+        profielTab.classList.remove('active');
+        
+        // Update the icon - find the i element and replace its content
+        const iconElement = profielTab.querySelector('i');
+        if (iconElement) {
+            iconElement.innerHTML = `<div><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="var(--action-neutral-normal)" display="block"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
+        }
+        
+        // Update the text
+        const spanElement = profielTab.querySelector('span');
+        if (spanElement) {
+            spanElement.textContent = 'Profiel';
+        }
+        
+        // Remove any notification counter if cloned
+        const counter = profielTab.querySelector('hmy-notification-counter');
+        if (counter) counter.remove();
+        
+        // Insert after the last tab
+        lastTab.after(profielTab);
+        
+        // Handle click - open profiel page
+        profielTab.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openProfielPage();
+        });
+        
+        // Mark as active if we're on profiel page
+        if (window.location.pathname === '/profiel' || id('mod-profiel-page')) {
+            profielTab.classList.add('active');
+            // Remove active from other tabs
+            tabItems.forEach(tab => tab.classList.remove('active'));
+        }
+    }
+    
+    // Open/Create the Profiel page
+    function openProfielPage() {
+        // Remove any existing profiel page
+        const existing = id('mod-profiel-page');
+        if (existing) {
+            existing.remove();
+            // Show main content again
+            const showElements = document.querySelectorAll('sl-home, sl-rooster, sl-studiewijzer, sl-cijfers, sl-berichten');
+            showElements.forEach(el => el.style.display = '');
+            
+            // Ensure header is visible
+            const headerElements = document.querySelectorAll('sl-header, sl-tab-bar, .tabs, .headers-container, hmy-switch-group');
+            headerElements.forEach(el => {
+                if (el) {
+                    el.style.display = '';
+                    el.style.visibility = 'visible';
+                    el.style.opacity = '1';
+                }
+            });
+            
+            // Go back
+            history.back();
+            return;
+        }
+        
+        // Hide the main content areas (but NOT the header/menu)
+        const hideElements = document.querySelectorAll('sl-home, sl-rooster, sl-studiewijzer, sl-cijfers, sl-berichten, sl-error');
+        hideElements.forEach(el => el.style.display = 'none');
+        
+        // Ensure header stays visible
+        const headerElements = document.querySelectorAll('sl-header, sl-tab-bar, .tabs, .headers-container');
+        headerElements.forEach(el => {
+            if (el) {
+                el.style.display = '';
+                el.style.zIndex = '1001';
+                el.style.position = 'relative';
+            }
+        });
+        
+        // Add styles first - using Somtoday Mod theme variables
+        if (!id('mod-profiel-styles')) {
+            const isDark = tn('html', 0).classList.contains('dark') || tn('html', 0).classList.contains('night');
+            const primaryColor = get('primarycolor') || '#6366f1';
+            const secondaryColor = get('secondarycolor') || '#8b5cf6';
+            const uiBlur = get('uiblur') || 0;
+            const uiTransparency = get('ui') || 0;
+            
+            const styles = document.createElement('style');
+            styles.id = 'mod-profiel-styles';
+            styles.textContent = `
+                #mod-profiel-page {
+                    position: fixed !important;
+                    top: 64px;
+                    left: var(--safe-area-inset-left, 0);
+                    right: var(--safe-area-inset-right, 0);
+                    bottom: 0;
+                    padding: 40px 20px;
+                    background: var(--bg-neutral-none, ${isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.95)'}) !important;
+                    ${uiBlur > 0 ? `backdrop-filter: blur(${uiBlur}px); -webkit-backdrop-filter: blur(${uiBlur}px);` : ''}
+                    z-index: 999 !important;
+                    overflow-y: auto;
+                    opacity: 0;
+                    animation: modProfielFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+                /* Ensure header/menu stays on top */
+                sl-header, sl-tab-bar, .tabs, .headers-container, hmy-switch-group {
+                    z-index: 1001 !important;
+                    position: relative !important;
+                }
+                @keyframes modProfielFadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .mod-profiel-container {
+                    max-width: 1000px;
+                    margin: 0 auto;
+                    animation: modProfielSlideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+                @keyframes modProfielSlideUp {
+                    from { opacity: 0; transform: translateY(40px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .mod-profiel-header {
+                    text-align: center;
+                    margin-bottom: 40px;
+                    animation: modProfielHeaderIn 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                    opacity: 0;
+                }
+                @keyframes modProfielHeaderIn {
+                    from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                .mod-profiel-avatar {
+                    width: 120px;
+                    height: 120px;
+                    background: var(--bg-elevated-weakest, ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'});
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                    border: 4px solid ${primaryColor};
+                    box-shadow: 0 8px 32px rgba(0,0,0,${isDark ? '0.3' : '0.1'});
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+                    animation: modProfielAvatarPulse 2s ease-in-out infinite;
+                }
+                .mod-profiel-avatar:hover {
+                    transform: scale(1.05);
+                    box-shadow: 0 12px 48px ${primaryColor}40;
+                }
+                @keyframes modProfielAvatarPulse {
+                    0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,${isDark ? '0.3' : '0.1'}); }
+                    50% { box-shadow: 0 12px 48px ${primaryColor}60; }
+                }
+                .mod-profiel-avatar svg {
+                    color: ${primaryColor};
+                    transition: transform 0.3s;
+                }
+                .mod-profiel-avatar:hover svg {
+                    transform: rotate(360deg);
+                }
+                .mod-profiel-title {
+                    font-size: 36px;
+                    font-weight: 700;
+                    background: linear-gradient(135deg, ${primaryColor}, ${secondaryColor});
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    margin: 0 0 8px 0;
+                    letter-spacing: -0.5px;
+                }
+                .mod-profiel-subtitle {
+                    font-size: 16px;
+                    color: var(--text-weak, ${isDark ? '#888' : '#666'}) !important;
+                    margin: 0;
+                }
+                .mod-profiel-stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 20px;
+                    margin-bottom: 32px;
+                }
+                @media (max-width: 768px) {
+                    .mod-profiel-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+                }
+                .mod-stat-card {
+                    background: linear-gradient(135deg, ${primaryColor}dd, ${secondaryColor}dd);
+                    ${uiBlur > 0 ? `backdrop-filter: blur(${uiBlur}px); -webkit-backdrop-filter: blur(${uiBlur}px);` : ''}
+                    border-radius: 16px;
+                    padding: 24px;
+                    text-align: center;
+                    border: 1px solid ${primaryColor}40;
+                    box-shadow: 0 4px 20px rgba(0,0,0,${isDark ? '0.3' : '0.1'});
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+                    opacity: 0;
+                    animation: modProfielStatCardIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+                .mod-stat-card:nth-child(1) { animation-delay: 0.1s; }
+                .mod-stat-card:nth-child(2) { animation-delay: 0.2s; }
+                .mod-stat-card:nth-child(3) { animation-delay: 0.3s; }
+                .mod-stat-card:nth-child(4) { animation-delay: 0.4s; }
+                @keyframes modProfielStatCardIn {
+                    from { opacity: 0; transform: translateY(30px) scale(0.9); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                .mod-stat-card:hover {
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: 0 8px 32px ${primaryColor}60;
+                }
+                .mod-stat-value {
+                    font-size: 42px;
+                    font-weight: 800;
+                    color: #fff !important;
+                    line-height: 1;
+                    margin-bottom: 8px;
+                    font-variant-numeric: tabular-nums;
+                }
+                .mod-stat-label {
+                    font-size: 13px;
+                    color: rgba(255,255,255,0.9) !important;
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .mod-profiel-content {
+                    background: var(--bg-elevated-weakest, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.6)'});
+                    ${uiBlur > 0 ? `backdrop-filter: blur(${uiBlur}px); -webkit-backdrop-filter: blur(${uiBlur}px);` : ''}
+                    border-radius: 20px;
+                    padding: 32px;
+                    border: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+                    box-shadow: 0 8px 32px rgba(0,0,0,${isDark ? '0.2' : '0.05'});
+                    animation: modProfielContentIn 1s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+                    opacity: 0;
+                }
+                @keyframes modProfielContentIn {
+                    from { opacity: 0; transform: translateY(30px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .mod-profiel-section {
+                    margin-bottom: 40px;
+                }
+                .mod-profiel-section:last-child {
+                    margin-bottom: 0;
+                }
+                .mod-profiel-section h2 {
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: var(--text-strong, ${isDark ? '#fff' : '#000'}) !important;
+                    margin: 0 0 20px 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                #mod-grades-chart-container {
+                    background: var(--bg-elevated-none, ${isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.4)'});
+                    border-radius: 16px;
+                    padding: 20px;
+                    border: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+                    animation: modProfielFadeIn 0.8s 0.5s forwards;
+                    opacity: 0;
+                    position: relative;
+                    overflow: visible;
+                    perspective: 1000px;
+                }
+                .mod-3d-chart {
+                    position: relative;
+                    height: 240px;
+                    display: flex;
+                    align-items: flex-end;
+                    justify-content: space-around;
+                    gap: 6px;
+                    padding: 16px 0;
+                    transform-style: preserve-3d;
+                }
+                .mod-3d-bar {
+                    position: relative;
+                    flex: 1;
+                    max-width: 40px;
+                    min-width: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    transform-style: preserve-3d;
+                    animation: mod3dBarAppear 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                    opacity: 0;
+                }
+                @keyframes mod3dBarAppear {
+                    from {
+                        opacity: 0;
+                        transform: translateY(30px) rotateX(-90deg) scale(0.5);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) rotateX(0deg) scale(1);
+                    }
+                }
+                .mod-3d-bar-front {
+                    width: 100%;
+                    height: var(--bar-height);
+                    background: linear-gradient(180deg, var(--bar-color-top), var(--bar-color-bottom));
+                    border-radius: 4px 4px 0 0;
+                    position: relative;
+                    transform: translateZ(4px);
+                    box-shadow: 
+                        0 -2px 8px rgba(0,0,0,${isDark ? '0.4' : '0.2'}),
+                        0 4px 16px rgba(0,0,0,${isDark ? '0.3' : '0.15'}),
+                        inset 0 1px 0 rgba(255,255,255,0.2);
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .mod-3d-bar:hover .mod-3d-bar-front {
+                    transform: translateZ(6px) scaleY(1.05);
+                }
+                .mod-3d-bar-top {
+                    width: 100%;
+                    height: 4px;
+                    background: var(--bar-color-top);
+                    border-radius: 4px 4px 0 0;
+                    position: absolute;
+                    top: 0;
+                    transform: rotateX(90deg) translateZ(4px);
+                    transform-origin: top;
+                    box-shadow: 0 2px 4px rgba(0,0,0,${isDark ? '0.3' : '0.2'});
+                }
+                .mod-3d-bar-side {
+                    width: 4px;
+                    height: var(--bar-height);
+                    background: linear-gradient(180deg, var(--bar-color-side-top), var(--bar-color-side-bottom));
+                    position: absolute;
+                    right: 0;
+                    transform: rotateY(90deg) translateZ(calc(100% - 4px));
+                    transform-origin: right;
+                    border-radius: 0 4px 0 0;
+                    box-shadow: 2px 0 4px rgba(0,0,0,${isDark ? '0.3' : '0.2'});
+                }
+                .mod-3d-bar-label {
+                    margin-top: 8px;
+                    font-size: 9px;
+                    font-weight: 500;
+                    color: var(--text-weak, ${isDark ? '#888' : '#666'}) !important;
+                    text-align: center;
+                    transform: translateZ(0);
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 100%;
+                }
+                .mod-3d-bar-value {
+                    position: absolute;
+                    top: -24px;
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: var(--text-strong, ${isDark ? '#fff' : '#000'}) !important;
+                    transform: translateZ(8px);
+                    background: var(--bg-elevated-weakest, ${isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.9)'});
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    box-shadow: 0 2px 6px rgba(0,0,0,${isDark ? '0.4' : '0.2'});
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                }
+                .mod-3d-bar:hover .mod-3d-bar-value {
+                    opacity: 1;
+                }
+                .mod-3d-bar-grade-good {
+                    --bar-color-top: #22c55e;
+                    --bar-color-bottom: #16a34a;
+                    --bar-color-side-top: #1ea34a;
+                    --bar-color-side-bottom: #15803d;
+                }
+                .mod-3d-bar-grade-ok {
+                    --bar-color-top: #f59e0b;
+                    --bar-color-bottom: #d97706;
+                    --bar-color-side-top: #d97706;
+                    --bar-color-side-bottom: #b45309;
+                }
+                .mod-3d-bar-grade-bad {
+                    --bar-color-top: #ef4444;
+                    --bar-color-bottom: #dc2626;
+                    --bar-color-side-top: #dc2626;
+                    --bar-color-side-bottom: #b91c1c;
+                }
+                .mod-3d-grid {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    height: 100%;
+                    pointer-events: none;
+                    opacity: 0.3;
+                }
+                .mod-3d-grid-line {
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    height: 1px;
+                    background: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+                    transform: translateZ(0);
+                }
+                .mod-3d-grid-label {
+                    position: absolute;
+                    left: -40px;
+                    font-size: 10px;
+                    color: var(--text-weak, ${isDark ? '#666' : '#999'}) !important;
+                    transform: translateY(-50%);
+                }
+                #mod-subjects-list {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                    gap: 16px;
+                }
+                .mod-subject-card {
+                    background: var(--bg-elevated-weakest, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'});
+                    ${uiBlur > 0 ? `backdrop-filter: blur(${uiBlur}px); -webkit-backdrop-filter: blur(${uiBlur}px);` : ''}
+                    border-radius: 12px;
+                    padding: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s, border-color 0.3s;
+                    opacity: 0;
+                    animation: modProfielSubjectCardIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+                @keyframes modProfielSubjectCardIn {
+                    from { opacity: 0; transform: translateX(-20px); }
+                    to { opacity: 1; transform: translateX(0); }
+                }
+                .mod-subject-card:hover {
+                    transform: translateX(4px);
+                    box-shadow: 0 4px 16px rgba(0,0,0,${isDark ? '0.3' : '0.1'});
+                    border-color: ${primaryColor}60;
+                }
+                .mod-subject-name {
+                    font-weight: 600;
+                    color: var(--text-strong, ${isDark ? '#fff' : '#000'}) !important;
+                    font-size: 15px;
+                }
+                .mod-subject-grade {
+                    font-size: 28px;
+                    font-weight: 800;
+                    padding: 8px 16px;
+                    border-radius: 10px;
+                    font-variant-numeric: tabular-nums;
+                    transition: transform 0.2s;
+                }
+                .mod-subject-grade:hover {
+                    transform: scale(1.1);
+                }
+                .mod-subject-grade.good { 
+                    background: linear-gradient(135deg, #22c55e, #16a34a); 
+                    color: #fff; 
+                    box-shadow: 0 4px 12px #22c55e40;
+                }
+                .mod-subject-grade.ok { 
+                    background: linear-gradient(135deg, #f59e0b, #d97706); 
+                    color: #fff; 
+                    box-shadow: 0 4px 12px #f59e0b40;
+                }
+                .mod-subject-grade.bad { 
+                    background: linear-gradient(135deg, #ef4444, #dc2626); 
+                    color: #fff; 
+                    box-shadow: 0 4px 12px #ef444440;
+                }
+                .mod-loading-spinner {
+                    width: 48px;
+                    height: 48px;
+                    border: 4px solid var(--bg-elevated-weak, ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'});
+                    border-top-color: ${primaryColor};
+                    border-radius: 50%;
+                    animation: modProfielSpin 1s linear infinite;
+                    margin: 30px auto;
+                }
+                @keyframes modProfielSpin { 
+                    to { transform: rotate(360deg); } 
+                }
+                #mod-subjects-loading {
+                    text-align: center;
+                    color: var(--text-weak, ${isDark ? '#888' : '#666'}) !important;
+                    padding: 40px 20px;
+                }
+                #mod-subject-stats {
+                    display: grid;
+                    gap: 12px;
+                }
+                .mod-stat-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px 20px;
+                    background: var(--bg-elevated-weakest, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)'});
+                    ${uiBlur > 0 ? `backdrop-filter: blur(${uiBlur}px); -webkit-backdrop-filter: blur(${uiBlur}px);` : ''}
+                    border-radius: 10px;
+                    border: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+                    transition: transform 0.2s, box-shadow 0.2s;
+                    opacity: 0;
+                    animation: modProfielStatRowIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+                .mod-stat-row:nth-child(1) { animation-delay: 0.1s; }
+                .mod-stat-row:nth-child(2) { animation-delay: 0.2s; }
+                .mod-stat-row:nth-child(3) { animation-delay: 0.3s; }
+                .mod-stat-row:nth-child(4) { animation-delay: 0.4s; }
+                .mod-stat-row:nth-child(5) { animation-delay: 0.5s; }
+                @keyframes modProfielStatRowIn {
+                    from { opacity: 0; transform: translateX(-10px); }
+                    to { opacity: 1; transform: translateX(0); }
+                }
+                .mod-stat-row:hover {
+                    transform: translateX(4px);
+                    box-shadow: 0 2px 8px rgba(0,0,0,${isDark ? '0.2' : '0.05'});
+                }
+                .mod-stat-row-label { 
+                    color: var(--text-weak, ${isDark ? '#aaa' : '#666'}) !important; 
+                    font-weight: 500;
+                }
+                .mod-stat-row-value { 
+                    color: var(--text-strong, ${isDark ? '#fff' : '#000'}) !important; 
+                    font-weight: 700;
+                    font-size: 18px;
+                    font-variant-numeric: tabular-nums;
+                }
+            `;
+            tn('head', 0).appendChild(styles);
+        }
+        
+        // Create profiel page container
+        const profielPage = document.createElement('div');
+        profielPage.id = 'mod-profiel-page';
+        profielPage.innerHTML = `
+            <div class="mod-profiel-container">
+                <div class="mod-profiel-header">
+                    <div class="mod-profiel-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="#6366f1">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                    </div>
+                    <h1 class="mod-profiel-title">Profiel</h1>
+                    <p class="mod-profiel-subtitle">Jouw cijferoverzicht en statistieken</p>
+                </div>
+                
+                <div class="mod-profiel-stats-grid">
+                    <div class="mod-stat-card">
+                        <div class="mod-stat-value" id="mod-stat-average">--</div>
+                        <div class="mod-stat-label">Gemiddelde</div>
+                    </div>
+                    <div class="mod-stat-card">
+                        <div class="mod-stat-value" id="mod-stat-total">--</div>
+                        <div class="mod-stat-label">Totaal cijfers</div>
+                    </div>
+                    <div class="mod-stat-card">
+                        <div class="mod-stat-value" id="mod-stat-highest">--</div>
+                        <div class="mod-stat-label">Hoogste</div>
+                    </div>
+                    <div class="mod-stat-card">
+                        <div class="mod-stat-value" id="mod-stat-lowest">--</div>
+                        <div class="mod-stat-label">Laagste</div>
+                    </div>
+                </div>
+                
+                <div class="mod-profiel-content">
+                    <div class="mod-profiel-section">
+                        <h2>📊 Cijfer Overzicht</h2>
+                        <div id="mod-grades-chart-container">
+                            <div id="mod-grades-chart" class="mod-3d-chart"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mod-profiel-section">
+                        <h2>📚 Vakken</h2>
+                        <div id="mod-subjects-loading">
+                            <div class="mod-loading-spinner"></div>
+                            <p>Cijfers laden...</p>
+                        </div>
+                        <div id="mod-subjects-list" style="display:none;"></div>
+                    </div>
+                    
+                    <div class="mod-profiel-section">
+                        <h2>📈 Statistieken per Vak</h2>
+                        <div id="mod-subject-stats"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Start loading grades data
+        setTimeout(() => loadAllGradesData(), 100);
+        
+        // Append to body
+        tn('body', 0).appendChild(profielPage);
+        
+        // Calculate actual header height and adjust profile page top
+        const headerEl = document.querySelector('sl-header');
+        const tabBar = document.querySelector('sl-tab-bar');
+        if (headerEl || tabBar) {
+            const headerHeight = (headerEl ? headerEl.offsetHeight : 0) + (tabBar ? tabBar.offsetHeight : 0);
+            if (headerHeight > 0) {
+                profielPage.style.top = headerHeight + 'px';
+            }
+        }
+        
+        // Ensure header elements stay visible (reuse the variable from earlier in function)
+        headerElements.forEach(el => {
+            if (el) {
+                el.style.display = '';
+                el.style.visibility = 'visible';
+                el.style.opacity = '1';
+                el.style.zIndex = '1001';
+            }
+        });
+        
+        // Update tab states
+        const tabItems = document.querySelectorAll('sl-tab-item');
+        tabItems.forEach(tab => tab.classList.remove('active'));
+        const profielTab = id('mod-profiel-tab');
+        if (profielTab) profielTab.classList.add('active');
+        
+        // Update URL without reload
+        history.pushState({page: 'profiel'}, '', '/profiel');
+    }
+    
+    // Handle back/forward navigation
+    window.addEventListener('popstate', function() {
+        const profielPage = id('mod-profiel-page');
+        if (profielPage) {
+            profielPage.remove();
+            // Show main content again
+            const showElements = document.querySelectorAll('sl-home, sl-rooster, sl-studiewijzer, sl-cijfers, sl-berichten');
+            showElements.forEach(el => el.style.display = '');
+            
+            // Ensure header is visible
+            const headerElements = document.querySelectorAll('sl-header, sl-tab-bar, .tabs, .headers-container, hmy-switch-group');
+            headerElements.forEach(el => {
+                if (el) {
+                    el.style.display = '';
+                    el.style.visibility = 'visible';
+                    el.style.opacity = '1';
+                }
+            });
+        }
+    });
+    
+    // Load all grades data for profile page - uses same method as Somtoday Recap
+    async function loadAllGradesData() {
+        const loadingEl = id('mod-subjects-loading');
+        const subjectsList = id('mod-subjects-list');
+        
+        try {
+            if (loadingEl) loadingEl.innerHTML = '<div class="mod-loading-spinner"></div><p>Cijferoverzicht openen...</p>';
+            
+            let subjects = [];
+            let allGrades = [];
+            let totalGradesCount = 0;
+            let totalWeight = 0;
+            
+            // Save current URL to restore later
+            const originalUrl = window.location.href;
+            
+            // Navigate to cijfers page if not already there
+            if (!window.location.pathname.includes('/cijfers')) {
+                window.history.pushState({}, '', '/cijfers/overzicht');
+            }
+            
+            // Method 1: Try to get data from already loaded cijfer-overzicht
+            let cijferOverzicht = tn('sl-cijfer-overzicht', 0);
+            
+            // If not on overzicht, click to switch to it
+            if (n(cijferOverzicht)) {
+                // Try clicking the overzicht tab (3rd switch)
+                const switches = tn('hmy-switch');
+                if (switches && switches.length >= 3) {
+                    if (loadingEl) loadingEl.innerHTML = '<div class="mod-loading-spinner"></div><p>Overzicht openen...</p>';
+                    switches[2].click();
+                    
+                    // Wait for overzicht to load
+                    for (let i = 0; i < 500; i++) {
+                        await new Promise(r => setTimeout(r, 20));
+                        cijferOverzicht = tn('sl-cijfer-overzicht', 0);
+                        if (!n(cijferOverzicht) && cn('vak-row', 0)) break;
+                    }
+                }
+            }
+            
+            // Wait a bit more for all periods to be available
+            await new Promise(r => setTimeout(r, 500));
+            
+            // Expand all periods
+            if (loadingEl) loadingEl.innerHTML = '<div class="mod-loading-spinner"></div><p>Periodes uitklappen...</p>';
+            const periodeHeaders = cn('periode-header');
+            if (periodeHeaders) {
+                for (const period of periodeHeaders) {
+                    if (!period.classList.contains('open')) {
+                        period.click();
+                    }
+                }
+            }
+            
+            // Wait for periods to expand
+            await new Promise(r => setTimeout(r, 800));
+            
+            // Now scrape all vak-rows (same as Recap does)
+            if (loadingEl) loadingEl.innerHTML = '<div class="mod-loading-spinner"></div><p>Vakken verzamelen...</p>';
+            
+            const vakRows = cn('vak-row');
+            if (vakRows && vakRows.length > 0) {
+                for (const element of vakRows) {
+                    let subject = {
+                        name: '',
+                        icon: '',
+                        average: null,
+                        grades: [],
+                        gradeCount: 0,
+                        weightCount: 0
+                    };
+                    
+                    // Get subject name
+                    const naamEl = element.getElementsByClassName('naam')[0];
+                    if (naamEl) {
+                        subject.name = naamEl.innerText.trim();
+                    }
+                    
+                    // Get subject icon
+                    const iconEl = element.querySelector('hmy-vak-icon svg');
+                    if (iconEl) {
+                        subject.icon = iconEl.outerHTML;
+                    }
+                    
+                    // Get averages (Rapport gem. or Rapportcijfer)
+                    const averageElements = element.getElementsByClassName('cijfer gemiddelde');
+                    if (averageElements.length >= 1) {
+                        let average;
+                        // Prefer the more precise average (with decimal)
+                        for (const gemiddelde of averageElements) {
+                            const text = gemiddelde.innerText;
+                            if (text.indexOf(',') !== -1 || text.indexOf('.') !== -1) {
+                                average = text.replace(',', '.');
+                            }
+                        }
+                        // Fallback to last average
+                        if (!average) {
+                            average = averageElements[averageElements.length - 1].innerText;
+                        }
+                        subject.average = isNaN(parseFloat(average)) ? null : parseFloat(average);
+                    }
+                    
+                    // Get individual grades (with weging from ariaLabel)
+                    let subjectGradeCount = 0;
+                    let subjectWeight = 0;
+                    
+                    for (const cijfer of element.getElementsByClassName('cijfer')) {
+                        if (cijfer.innerText === '' || cijfer.classList.contains('gemiddelde')) {
+                            continue;
+                        }
+                        
+                        const gradeText = cijfer.innerText.replace(',', '.');
+                        const grade = parseFloat(gradeText);
+                        const ariaLabel = cijfer.ariaLabel || '';
+                        
+                        // Extract weging from ariaLabel (format: "... weging X ...")
+                        const wegingMatch = ariaLabel.match(/weging\s+([\d.,]+)/i);
+                        const weging = wegingMatch ? parseFloat(wegingMatch[1].replace(',', '.')) : 1;
+                        
+                        if (ariaLabel && !cijfer.classList.contains('gemiddelde')) {
+                            subject.grades.push({
+                                cijfer: isNaN(grade) ? cijfer.innerText : grade,
+                                weging: weging
+                            });
+                            
+                            if (!isNaN(grade)) {
+                                allGrades.push(grade);
+                            }
+                            
+                            subjectGradeCount++;
+                            subjectWeight += weging;
+                        }
+                    }
+                    
+                    subject.gradeCount = subjectGradeCount;
+                    subject.weightCount = subjectWeight;
+                    
+                    // Only add subjects with grades or average
+                    if (subject.name && (subjectGradeCount > 0 || subject.average !== null)) {
+                        // Check for duplicates
+                        const isDuplicate = subjects.some(s => s.name === subject.name);
+                        if (!isDuplicate) {
+                            subjects.push(subject);
+                            totalGradesCount += subjectGradeCount;
+                            totalWeight += subjectWeight;
+                        }
+                    }
+                }
+            }
+            
+            // If no data found, try cache
+            if (subjects.length === 0) {
+                try {
+                    const cached = localStorage.getItem('somtoday_mod_grades_v2');
+                    if (cached) {
+                        const data = JSON.parse(cached);
+                        if (data.timestamp && Date.now() - data.timestamp < 3600000) {
+                            subjects = data.subjects || [];
+                            allGrades = data.allGrades || [];
+                            totalGradesCount = data.totalGradesCount || 0;
+                        }
+                    }
+                } catch (e) {}
+            }
+            
+            // Update stat cards - use WASM if available, fallback to JS
+            const numericGrades = allGrades.filter(g => !isNaN(g));
+            let avg, highest, lowest;
+            
+            // Try to use WASM for calculations
+            if (window.SomtodayAnalytics && typeof window.SomtodayAnalytics.init === 'function') {
+                try {
+                    await window.SomtodayAnalytics.init();
+                    if (window.SomtodayAnalytics.isReady && window.SomtodayAnalytics.isReady() && numericGrades.length > 0) {
+                        // Use WASM for weighted average if we have weights
+                        // WASM expects grade objects with: value, weight, and subject
+                        try {
+                            const gradesWithWeights = subjects
+                                .filter(s => s && s.grades && Array.isArray(s.grades))
+                                .flatMap(s => 
+                                    s.grades
+                                        .filter(g => g && typeof g === 'object' && !isNaN(g.cijfer))
+                                        .map(g => ({
+                                            value: typeof g.cijfer === 'number' ? g.cijfer : parseFloat(g.cijfer),
+                                            weight: (typeof g.weging === 'number' ? g.weging : parseFloat(g.weging)) || 1,
+                                            subject: s.name || 'Unknown',
+                                            description: g.omschrijving || g.description || ''
+                                        }))
+                                );
+                            
+                            if (gradesWithWeights.length > 0 && window.SomtodayAnalytics.calculateWeightedAverage) {
+                                try {
+                                    avg = window.SomtodayAnalytics.calculateWeightedAverage(gradesWithWeights);
+                                } catch (e) {
+                                    console.log('WASM calculateWeightedAverage failed, using JS fallback:', e);
+                                    // Fall through to JS calculation
+                                }
+                            }
+                            
+                            // If WASM didn't work, try simpler functions
+                            if (avg === undefined && numericGrades.length > 0) {
+                                // For simple average, create grade objects with subject
+                                const gradesForWasm = numericGrades.map(g => ({
+                                    value: typeof g === 'number' ? g : parseFloat(g),
+                                    weight: 1,
+                                    subject: 'All',
+                                    description: ''
+                                }));
+                                
+                                if (window.SomtodayAnalytics.calculateAverage) {
+                                    try {
+                                        avg = window.SomtodayAnalytics.calculateAverage(gradesForWasm);
+                                    } catch (e) {
+                                        console.log('WASM calculateAverage failed, using JS fallback:', e);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.log('Error preparing WASM data, using JS fallback:', e);
+                        }
+                        
+                        if (numericGrades.length > 0) {
+                            highest = Math.max(...numericGrades);
+                            lowest = Math.min(...numericGrades);
+                        }
+                    }
+                } catch (e) {
+                    console.log('WASM calculation failed, using JS fallback:', e);
+                }
+            }
+            
+            // Fallback to JS calculations
+            if (avg === undefined) {
+                if (numericGrades.length > 0) {
+                    avg = numericGrades.reduce((a, b) => a + b, 0) / numericGrades.length;
+                    highest = Math.max(...numericGrades);
+                    lowest = Math.min(...numericGrades);
+                } else if (subjects.length > 0) {
+                    const avgs = subjects.filter(s => s.average !== null).map(s => s.average);
+                    if (avgs.length > 0) {
+                        avg = avgs.reduce((a, b) => a + b, 0) / avgs.length;
+                        highest = Math.max(...avgs);
+                        lowest = Math.min(...avgs);
+                    }
+                }
+            }
+            
+            // Animate stat cards with stagger
+            if (avg !== undefined) {
+                const avgEl = id('mod-stat-average');
+                const totalEl = id('mod-stat-total');
+                const highEl = id('mod-stat-highest');
+                const lowEl = id('mod-stat-lowest');
+                
+                // Animate numbers counting up
+                const animateValue = (el, start, end, duration) => {
+                    if (!el) return;
+                    const startTime = performance.now();
+                    const animate = (currentTime) => {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const current = start + (end - start) * progress;
+                        el.textContent = typeof end === 'number' ? current.toFixed(1) : Math.round(current);
+                        if (progress < 1) requestAnimationFrame(animate);
+                        else el.textContent = typeof end === 'number' ? end.toFixed(1) : end;
+                    };
+                    requestAnimationFrame(animate);
+                };
+                
+                setTimeout(() => {
+                    if (avgEl) animateValue(avgEl, 0, avg, 800);
+                    if (totalEl) animateValue(totalEl, 0, numericGrades.length || subjects.length, 600);
+                    if (highEl) animateValue(highEl, 0, highest, 700);
+                    if (lowEl) animateValue(lowEl, 10, lowest, 700);
+                }, 500);
+            }
+            
+            // Render subjects list with stagger animations
+            if (subjectsList && subjects.length > 0) {
+                // Sort by average descending
+                subjects.sort((a, b) => (b.average || 0) - (a.average || 0));
+                
+                const isDark = tn('html', 0).classList.contains('dark') || tn('html', 0).classList.contains('night');
+                const textWeak = isDark ? '#888' : '#666';
+                
+                subjectsList.innerHTML = subjects.map((s, index) => {
+                    const grade = s.average;
+                    const gradeClass = grade >= 7 ? 'good' : (grade >= 5.5 ? 'ok' : 'bad');
+                    const gradeCount = s.gradeCount || 0;
+                    const iconHtml = s.icon ? `<span style="margin-right:8px;display:inline-flex;vertical-align:middle;">${s.icon}</span>` : '';
+                    
+                    return `
+                        <div class="mod-subject-card" style="animation-delay: ${index * 0.05}s;">
+                            <div style="display:flex;align-items:center;">
+                                ${iconHtml}
+                                <div>
+                                    <span class="mod-subject-name">${s.name}</span>
+                                    <span style="font-size:11px;color:${textWeak};display:block;">${gradeCount} cijfer${gradeCount !== 1 ? 's' : ''}${s.weightCount ? ` (weging: ${s.weightCount})` : ''}</span>
+                                </div>
+                            </div>
+                            <span class="mod-subject-grade ${gradeClass}">${grade !== null ? grade.toFixed(1) : '-'}</span>
+                        </div>
+                    `;
+                }).join('');
+                subjectsList.style.display = 'grid';
+                if (loadingEl) {
+                    loadingEl.style.opacity = '0';
+                    loadingEl.style.transition = 'opacity 0.3s';
+                    setTimeout(() => {
+                        loadingEl.style.display = 'none';
+                    }, 300);
+                }
+            } else if (subjects.length === 0) {
+                if (loadingEl) {
+                    loadingEl.innerHTML = `
+                        <div style="text-align:center;color:#f59e0b;">
+                            <p>⚠️ Geen vakken gevonden</p>
+                            <p style="font-size:12px;color:#888;margin-top:8px;">
+                                Ga naar <a href="/cijfers/overzicht" style="color:#6366f1;">cijferoverzicht</a> 
+                                en kom dan terug naar Profiel.
+                            </p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Render pass/fail stats
+            const statsEl = id('mod-subject-stats');
+            if (statsEl) {
+                const numericGrades = allGrades.filter(g => !isNaN(g));
+                if (numericGrades.length > 0) {
+                    const passing = numericGrades.filter(g => g >= 5.5).length;
+                    const failing = numericGrades.filter(g => g < 5.5).length;
+                    const excellents = numericGrades.filter(g => g >= 8).length;
+                    
+                    statsEl.innerHTML = `
+                        <div class="mod-stat-row">
+                            <span class="mod-stat-row-label">Voldoendes</span>
+                            <span class="mod-stat-row-value" style="color:#22c55e !important;">${passing}</span>
+                        </div>
+                        <div class="mod-stat-row">
+                            <span class="mod-stat-row-label">Onvoldoendes</span>
+                            <span class="mod-stat-row-value" style="color:#ef4444 !important;">${failing}</span>
+                        </div>
+                        <div class="mod-stat-row">
+                            <span class="mod-stat-row-label">8 of hoger</span>
+                            <span class="mod-stat-row-value" style="color:#6366f1 !important;">${excellents}</span>
+                        </div>
+                        <div class="mod-stat-row">
+                            <span class="mod-stat-row-label">Slagingspercentage</span>
+                            <span class="mod-stat-row-value">${((passing / numericGrades.length) * 100).toFixed(0)}%</span>
+                        </div>
+                        <div class="mod-stat-row">
+                            <span class="mod-stat-row-label">Totale weging</span>
+                            <span class="mod-stat-row-value">${totalWeight}</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Draw chart
+            if (subjects.length > 0) {
+                const chartSubjects = subjects
+                    .filter(s => s.average !== null)
+                    .map(s => ({ name: s.name, average: s.average }));
+                drawGradesChart(chartSubjects);
+            }
+            
+            // Cache results
+            try {
+                localStorage.setItem('somtoday_mod_grades_v2', JSON.stringify({
+                    subjects, allGrades, totalGradesCount, timestamp: Date.now()
+                }));
+            } catch (e) {}
+            
+        } catch (err) {
+            console.error('Error loading grades:', err);
+            if (loadingEl) {
+                loadingEl.innerHTML = `
+                    <div style="text-align:center;color:#ef4444;">
+                        <p>❌ Fout: ${err.message}</p>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // Draw grades chart - Beautiful dynamic 3D diagram
+    function drawGradesChart(subjects) {
+        const chartEl = id('mod-grades-chart');
+        if (!chartEl || !subjects || subjects.length === 0) return;
+        
+        const maxHeight = 200; // Max bar height in pixels
+        const threshold = 5.5;
+        
+        // Sort subjects by average descending
+        const sorted = [...subjects].sort((a, b) => (b.average || 0) - (a.average || 0));
+        
+        // Clear previous content
+        chartEl.innerHTML = '';
+        
+        // Add grid lines
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'mod-3d-grid';
+        for (let i = 0; i <= 10; i++) {
+            const gridLine = document.createElement('div');
+            gridLine.className = 'mod-3d-grid-line';
+            const yPos = (i / 10) * 100;
+            gridLine.style.bottom = `${yPos}%`;
+            
+            if (i % 2 === 0) {
+                const label = document.createElement('div');
+                label.className = 'mod-3d-grid-label';
+                label.textContent = i.toString();
+                label.style.bottom = `${yPos}%`;
+                gridLine.appendChild(label);
+            }
+            
+            gridContainer.appendChild(gridLine);
+        }
+        chartEl.appendChild(gridContainer);
+        
+        // Create 3D bars
+        sorted.forEach((subject, idx) => {
+            const grade = subject.average || 0;
+            const barHeight = (grade / 10) * maxHeight;
+            const gradeClass = grade >= 7 ? 'good' : (grade >= 5.5 ? 'ok' : 'bad');
+            const shortName = subject.name.length > 10 ? subject.name.substring(0, 10) + '...' : subject.name;
+            
+            const barContainer = document.createElement('div');
+            barContainer.className = `mod-3d-bar mod-3d-bar-grade-${gradeClass}`;
+            barContainer.style.setProperty('--bar-height', `${barHeight}px`);
+            barContainer.style.animationDelay = `${idx * 0.1}s`;
+            
+            // Front face
+            const front = document.createElement('div');
+            front.className = 'mod-3d-bar-front';
+            barContainer.appendChild(front);
+            
+            // Top face
+            const top = document.createElement('div');
+            top.className = 'mod-3d-bar-top';
+            barContainer.appendChild(top);
+            
+            // Side face
+            const side = document.createElement('div');
+            side.className = 'mod-3d-bar-side';
+            barContainer.appendChild(side);
+            
+            // Value label (shown on hover)
+            const value = document.createElement('div');
+            value.className = 'mod-3d-bar-value';
+            value.textContent = grade.toFixed(1);
+            barContainer.appendChild(value);
+            
+            // Subject label
+            const label = document.createElement('div');
+            label.className = 'mod-3d-bar-label';
+            label.textContent = shortName;
+            barContainer.appendChild(label);
+            
+            chartEl.appendChild(barContainer);
+        });
+        
+        // Add threshold indicator
+        const thresholdLine = document.createElement('div');
+        thresholdLine.style.cssText = `
+            position: absolute;
+            bottom: ${(threshold / 10) * 100}%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ef4444, transparent);
+            opacity: 0.6;
+            pointer-events: none;
+            transform: translateZ(0);
+        `;
+        chartEl.appendChild(thresholdLine);
+    }
+
     function easterEggs() {
         if (n(id('mod-easter-eggs'))) {
             tn('head', 0).insertAdjacentHTML('beforeend', '<style id="mod-easter-eggs">#blue-screen-of-death{position:fixed;top:0;left:0;z-index:10000;width:100%;height:100%;background:#1173aa;}#blue-screen-of-death svg{user-select:none;pointer-events:none;position:absolute;top:50%;box-sizing:border-box;transform:translateY(-50%);width:100%;}#mod-logo-decoration{position:absolute;width:50px;right:5px;top:65px;transition:transform 0.3s,opacity 0.3s;}#mod-logo-decoration.mod-logo-decoration-clicked{opacity:0;}#mod-logo-decoration:hover{transform:scale(1.1);}#mod-logo-hat{z-index:1;width:80px;height:80px;position:absolute;left:-6px;top:-9px;transform:rotate(-20deg);transition:transform 0.3s,left 0.3s,opacity 0.3s;}#mod-logo-hat:hover{transform:rotate(-30deg);left:-12px;}#mod-logo-hat.mod-logo-hat-clicked{animation:1s hatfalloff forwards;}@keyframes hatfalloff{0%{transform:rotate(-30deg);left:-12px;top:-9px;opacity:1;}90%{opacity:1;}100%{transform:rotate(-140deg);left:-90px;top:75px;opacity:0;}}body.easter-egg-shaking .background.ng-trigger{pointer-events:none !important;}@media(max-width:1279px){#mod-logo-hat{left:-15px;}#mod-logo-hat:hover{left:-20px;}}#somtoday-mod-version-easter-egg:active{border:2px solid var(--bg-primary-normal);border-radius:6px}.mod-easter-egg-logo{position:fixed;z-index:100000000;animation:8s logowalk infinite;width:200px;height:200px;}@keyframes logowalk{0%{bottom:10%;left:-210px;}20%{bottom:20%;left:80%;transform:rotate(40deg);}40%{bottom:40%;left:10px;transform:rotate(60deg);}60%{bottom:90%;left:50%;transform:rotate(-60deg);}80%{bottom:50%;left:90%;transform:rotate(10deg);}100%{bottom:10%;left:-210px;}}body.rainbow{animation:rainbow 4s infinite;}body.rainbow #mod-background{opacity:0.25;}@keyframes rainbow{100%,0%{background-color: rgb(255,0,0);}8%{background-color: rgb(255,127,0);}16%{background-color: rgb(255,255,0);}25%{background-color: rgb(127,255,0);}33%{background-color: rgb(0,255,0);}41%{background-color: rgb(0,255,127);}50%{background-color: rgb(0,255,255);}58%{background-color: rgb(0,127,255);}66%{background-color: rgb(0,0,255);}75%{background-color: rgb(127,0,255);}83%{background-color: rgb(255,0,255);}91%{background-color: rgb(255,0,127);}}body.barrelroll{animation:barrelroll 2s 0.1s infinite;}@keyframes barrelroll{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}' + ((get('layout') == 1 || get('layout') == 4) ? '@media (max-width:767px){#mod-logo-inserted,#mod-logo-hat{display:none;}}' : '') + '</style>');
@@ -6036,7 +7168,7 @@ function onload() {
         }
         darkmode = tn('html', 0).classList.contains('dark') || tn('html', 0).classList.contains('night');
         busy = true;
-        execute([gradeReveal, userName, teacherNicknames, insertModSettingLink, insertGradeDownloadButton, subjectGradesPage, somtodayRecap, rosterSimplify, newYearCountdown, topMenu, easterEggs, editGrades, browserSettings, initTheme]);
+        execute([gradeReveal, userName, teacherNicknames, insertModSettingLink, insertGradeDownloadButton, subjectGradesPage, somtodayRecap, rosterSimplify, newYearCountdown, topMenu, easterEggs, editGrades, browserSettings, initTheme, addProfielTab]);
         if (updateStyle) {
             execute([updateCssVariables]);
         }

@@ -7,10 +7,79 @@
 // ============================================================================
 
 let wasmModule = null;
+let wasmExports = null;
 let wasmInitialized = false;
 let wasmInitPromise = null;
 let analyticsCache = new Map();
 const CACHE_TTL = 60000; // 1 minute cache
+
+// WASM memory helpers
+let cachedDataViewMemory0 = null;
+let cachedUint8ArrayMemory0 = null;
+let WASM_VECTOR_LEN = 0;
+
+function getDataViewMemory0() {
+    if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || 
+        (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasmExports.memory.buffer)) {
+        cachedDataViewMemory0 = new DataView(wasmExports.memory.buffer);
+    }
+    return cachedDataViewMemory0;
+}
+
+function getUint8ArrayMemory0() {
+    if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
+        cachedUint8ArrayMemory0 = new Uint8Array(wasmExports.memory.buffer);
+    }
+    return cachedUint8ArrayMemory0;
+}
+
+let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+cachedTextDecoder.decode();
+const cachedTextEncoder = new TextEncoder();
+
+function getStringFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+}
+
+function passStringToWasm0(arg, malloc, realloc) {
+    if (realloc === undefined) {
+        const buf = cachedTextEncoder.encode(arg);
+        const ptr = malloc(buf.length, 1) >>> 0;
+        getUint8ArrayMemory0().subarray(ptr, ptr + buf.length).set(buf);
+        WASM_VECTOR_LEN = buf.length;
+        return ptr;
+    }
+
+    let len = arg.length;
+    let ptr = malloc(len, 1) >>> 0;
+    const mem = getUint8ArrayMemory0();
+    let offset = 0;
+
+    for (; offset < len; offset++) {
+        const code = arg.charCodeAt(offset);
+        if (code > 0x7F) break;
+        mem[ptr + offset] = code;
+    }
+    if (offset !== len) {
+        if (offset !== 0) {
+            arg = arg.slice(offset);
+        }
+        ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+        const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
+        const ret = cachedTextEncoder.encodeInto(arg, view);
+        offset += ret.written;
+        ptr = realloc(ptr, len, offset, 1) >>> 0;
+    }
+    WASM_VECTOR_LEN = offset;
+    return ptr;
+}
+
+function takeFromExternrefTable0(idx) {
+    const value = wasmExports.__wbindgen_externrefs.get(idx);
+    wasmExports.__externref_table_dealloc(idx);
+    return value;
+}
 
 // ============================================================================
 // WASM Module Loader
@@ -31,37 +100,38 @@ async function initWasmAnalytics() {
     
     wasmInitPromise = (async () => {
         try {
+            // Check if chrome.runtime is available
+            if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.getURL) {
+                wasmInitialized = false;
+                return false;
+            }
+            
             // Try to load WASM module
-            const wasmUrl = typeof chrome !== 'undefined' && chrome.runtime 
-                ? chrome.runtime.getURL('wasm/pkg/somtoday_analytics_bg.wasm')
-                : '/wasm/pkg/somtoday_analytics_bg.wasm';
+            const wasmUrl = chrome.runtime.getURL('wasm/pkg/somtoday_analytics_bg.wasm');
             
             const response = await fetch(wasmUrl);
             
             if (!response.ok) {
-                console.warn('WASM Analytics: Could not load WASM module, using JS fallback');
                 wasmInitialized = false;
                 return false;
             }
             
             const wasmBytes = await response.arrayBuffer();
-            const wasmImports = getWasmImports();
-            const { instance } = await WebAssembly.instantiate(wasmBytes, wasmImports);
+            const imports = getWasmImports();
+            const { instance } = await WebAssembly.instantiate(wasmBytes, imports);
             
-            wasmModule = instance.exports;
-            wasmInitialized = true;
+            wasmExports = instance.exports;
+            wasmModule = createWasmInterface();
             
-            // Run health check
-            if (wasmModule.health_check && wasmModule.health_check()) {
-                console.log('WASM Analytics: Module loaded successfully, version:', getWasmVersion());
-                return true;
+            // Initialize the externref table
+            if (wasmExports.__wbindgen_start) {
+                wasmExports.__wbindgen_start();
             }
             
-            console.warn('WASM Analytics: Health check failed, using JS fallback');
-            wasmInitialized = false;
-            return false;
+            wasmInitialized = true;
+            console.log('Somtoday Mod: WASM Analytics loaded');
+            return true;
         } catch (error) {
-            console.warn('WASM Analytics: Failed to load module, using JS fallback:', error.message);
             wasmInitialized = false;
             return false;
         }
@@ -71,32 +141,231 @@ async function initWasmAnalytics() {
 }
 
 /**
- * Get WASM imports object
+ * Get WASM imports object (matches wasm-bindgen output)
  */
 function getWasmImports() {
-    return {
-        env: {
-            memory: new WebAssembly.Memory({ initial: 256, maximum: 512 }),
-            abort: () => console.error('WASM abort called'),
+    const import0 = {
+        __wbg_error_7534b8e9a36f1ab4: function(arg0, arg1) {
+            let deferred0_0 = arg0;
+            let deferred0_1 = arg1;
+            try {
+                console.error(getStringFromWasm0(arg0, arg1));
+            } finally {
+                wasmExports.__wbindgen_free(deferred0_0, deferred0_1, 1);
+            }
         },
-        wbg: {
-            __wbindgen_throw: (ptr, len) => {
-                const message = readWasmString(ptr, len);
-                throw new Error(message);
-            },
-            __wbindgen_string_new: (ptr, len) => readWasmString(ptr, len),
-            __wbg_log_: (ptr, len) => console.log(readWasmString(ptr, len)),
-        }
+        __wbg_new_8a6f238a6ece86ea: function() {
+            return new Error();
+        },
+        __wbg_stack_0ed75d68575b0f3c: function(arg0, arg1) {
+            const ret = arg1.stack;
+            const ptr1 = passStringToWasm0(ret, wasmExports.__wbindgen_malloc, wasmExports.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbindgen_cast_0000000000000001: function(arg0, arg1) {
+            return getStringFromWasm0(arg0, arg1);
+        },
+        __wbindgen_init_externref_table: function() {
+            const table = wasmExports.__wbindgen_externrefs;
+            const offset = table.grow(4);
+            table.set(0, undefined);
+            table.set(offset + 0, undefined);
+            table.set(offset + 1, null);
+            table.set(offset + 2, true);
+            table.set(offset + 3, false);
+        },
+    };
+    return {
+        "./somtoday_analytics_bg.js": import0,
     };
 }
 
 /**
- * Read a string from WASM memory
+ * Create high-level interface to WASM functions
  */
-function readWasmString(ptr, len) {
-    if (!wasmModule || !wasmModule.memory) return '';
-    const bytes = new Uint8Array(wasmModule.memory.buffer, ptr, len);
-    return new TextDecoder().decode(bytes);
+function createWasmInterface() {
+    // Helper for string return with cleanup
+    const callStringReturn = (fn, ...args) => {
+        let deferred0 = 0, deferred1 = 0;
+        try {
+            const ret = fn(...args);
+            deferred0 = ret[0];
+            deferred1 = ret[1];
+            if (ret[3]) {
+                deferred0 = 0; deferred1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            if (deferred0) wasmExports.__wbindgen_free(deferred0, deferred1, 1);
+        }
+    };
+
+    // Helper to pass a string argument
+    const passStr = (str) => {
+        const ptr = passStringToWasm0(str, wasmExports.__wbindgen_malloc, wasmExports.__wbindgen_realloc);
+        return [ptr, WASM_VECTOR_LEN];
+    };
+
+    return {
+        health_check: () => {
+            try { return wasmExports.health_check() !== 0; } catch { return false; }
+        },
+        get_version: () => {
+            try {
+                let d0 = 0, d1 = 0;
+                try {
+                    const ret = wasmExports.get_version();
+                    d0 = ret[0]; d1 = ret[1];
+                    return getStringFromWasm0(ret[0], ret[1]);
+                } finally {
+                    if (d0) wasmExports.__wbindgen_free(d0, d1, 1);
+                }
+            } catch { return '1.0.0'; }
+        },
+        calculate_weighted_average: (gradesJson) => {
+            const [ptr, len] = passStr(gradesJson);
+            const ret = wasmExports.calculate_weighted_average(ptr, len);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        calculate_average: (gradesJson) => {
+            const [ptr, len] = passStr(gradesJson);
+            const ret = wasmExports.calculate_average(ptr, len);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        calculate_gpa: (gradesJson, scaleJson) => {
+            const [ptr0, len0] = passStr(gradesJson);
+            const [ptr1, len1] = passStr(scaleJson);
+            const ret = wasmExports.calculate_gpa(ptr0, len0, ptr1, len1);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        calculate_subject_average: (gradesJson, subject) => {
+            const [ptr0, len0] = passStr(gradesJson);
+            const [ptr1, len1] = passStr(subject);
+            const ret = wasmExports.calculate_subject_average(ptr0, len0, ptr1, len1);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        calculate_statistics: (dataJson) => {
+            const [ptr, len] = passStr(dataJson);
+            return callStringReturn((p, l) => wasmExports.calculate_statistics(p, l), ptr, len);
+        },
+        calculate_percentile: (dataJson, percentile) => {
+            const [ptr, len] = passStr(dataJson);
+            const ret = wasmExports.calculate_percentile(ptr, len, percentile);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        calculate_correlation: (data1Json, data2Json) => {
+            const [ptr0, len0] = passStr(data1Json);
+            const [ptr1, len1] = passStr(data2Json);
+            const ret = wasmExports.calculate_correlation(ptr0, len0, ptr1, len1);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        calculate_trend: (dataJson) => {
+            const [ptr, len] = passStr(dataJson);
+            return callStringReturn((p, l) => wasmExports.calculate_trend(p, l), ptr, len);
+        },
+        calculate_pass_fail_stats: (gradesJson) => {
+            const [ptr, len] = passStr(gradesJson);
+            return callStringReturn((p, l) => wasmExports.calculate_pass_fail_stats(p, l), ptr, len);
+        },
+        analyze_all_grades: (gradesJson) => {
+            const [ptr, len] = passStr(gradesJson);
+            return callStringReturn((p, l) => wasmExports.analyze_all_grades(p, l), ptr, len);
+        },
+        get_all_subjects: (gradesJson) => {
+            const [ptr, len] = passStr(gradesJson);
+            return callStringReturn((p, l) => wasmExports.get_all_subjects(p, l), ptr, len);
+        },
+        get_subject_summary: (gradesJson, subject) => {
+            const [ptr0, len0] = passStr(gradesJson);
+            const [ptr1, len1] = passStr(subject);
+            let d0 = 0, d1 = 0;
+            try {
+                const ret = wasmExports.get_subject_summary(ptr0, len0, ptr1, len1);
+                d0 = ret[0]; d1 = ret[1];
+                if (ret[3]) { d0 = 0; d1 = 0; throw takeFromExternrefTable0(ret[2]); }
+                return getStringFromWasm0(ret[0], ret[1]);
+            } finally {
+                if (d0) wasmExports.__wbindgen_free(d0, d1, 1);
+            }
+        },
+        predict_grade_needed: (currentAvg, totalWeight, targetAvg, newWeight) => {
+            const ret = wasmExports.predict_grade_needed(currentAvg, totalWeight, targetAvg, newWeight);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        predict_next_grade: (gradesJson) => {
+            const [ptr, len] = passStr(gradesJson);
+            return callStringReturn((p, l) => wasmExports.predict_next_grade(p, l), ptr, len);
+        },
+        calculate_whatif: (gradesJson, hypotheticalJson) => {
+            const [ptr0, len0] = passStr(gradesJson);
+            const [ptr1, len1] = passStr(hypotheticalJson);
+            let d0 = 0, d1 = 0;
+            try {
+                const ret = wasmExports.calculate_whatif(ptr0, len0, ptr1, len1);
+                d0 = ret[0]; d1 = ret[1];
+                if (ret[3]) { d0 = 0; d1 = 0; throw takeFromExternrefTable0(ret[2]); }
+                return getStringFromWasm0(ret[0], ret[1]);
+            } finally {
+                if (d0) wasmExports.__wbindgen_free(d0, d1, 1);
+            }
+        },
+        generate_impact_analysis: (gradesJson, subject, weight) => {
+            const [ptr0, len0] = passStr(gradesJson);
+            const [ptr1, len1] = passStr(subject);
+            let d0 = 0, d1 = 0;
+            try {
+                const ret = wasmExports.generate_impact_analysis(ptr0, len0, ptr1, len1, weight);
+                d0 = ret[0]; d1 = ret[1];
+                if (ret[3]) { d0 = 0; d1 = 0; throw takeFromExternrefTable0(ret[2]); }
+                return getStringFromWasm0(ret[0], ret[1]);
+            } finally {
+                if (d0) wasmExports.__wbindgen_free(d0, d1, 1);
+            }
+        },
+        calculate_grades_for_targets: (gradesJson, subject, weight, targetsJson) => {
+            const [ptr0, len0] = passStr(gradesJson);
+            const [ptr1, len1] = passStr(subject);
+            const [ptr2, len2] = passStr(targetsJson);
+            let d0 = 0, d1 = 0;
+            try {
+                const ret = wasmExports.calculate_grades_for_targets(ptr0, len0, ptr1, len1, weight, ptr2, len2);
+                d0 = ret[0]; d1 = ret[1];
+                if (ret[3]) { d0 = 0; d1 = 0; throw takeFromExternrefTable0(ret[2]); }
+                return getStringFromWasm0(ret[0], ret[1]);
+            } finally {
+                if (d0) wasmExports.__wbindgen_free(d0, d1, 1);
+            }
+        },
+        parse_grade: (gradeStr) => {
+            const [ptr, len] = passStr(gradeStr);
+            const ret = wasmExports.parse_grade(ptr, len);
+            if (ret[2]) throw takeFromExternrefTable0(ret[1]);
+            return ret[0];
+        },
+        validate_grade: (value) => {
+            return wasmExports.validate_grade(value) !== 0;
+        },
+        format_grade: (value, decimals) => {
+            let d0 = 0, d1 = 0;
+            try {
+                const ret = wasmExports.format_grade(value, decimals);
+                d0 = ret[0]; d1 = ret[1];
+                return getStringFromWasm0(ret[0], ret[1]);
+            } finally {
+                if (d0) wasmExports.__wbindgen_free(d0, d1, 1);
+            }
+        },
+    };
 }
 
 /**
@@ -105,7 +374,7 @@ function readWasmString(ptr, len) {
 function getWasmVersion() {
     if (!wasmInitialized || !wasmModule) return 'N/A';
     try {
-        return wasmModule.get_version ? wasmModule.get_version() : '1.0.0';
+        return wasmModule.get_version();
     } catch {
         return '1.0.0';
     }
