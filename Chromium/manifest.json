@@ -19,6 +19,13 @@
         "scripts/minigame.js",
         "scripts/fireworks.js",
         "scripts/chart.js",
+        "scripts/wasm_analytics.js",
+        "scripts/analytics_ui.js",
+        "scripts/achievements.js",
+        "scripts/gamification.js",
+        "scripts/leaderboards.js",
+        "scripts/study_groups.js",
+        "scripts/activity_feed.js",
         "scripts/main_functions.js",
         "scripts/execute_after_page_load.js"
       ],
@@ -28,7 +35,9 @@
         "css/somtoday-recap.css",
         "css/mod-settings.css",
         "css/custom-homework.css",
-        "css/platformer.css"
+        "css/platformer.css",
+        "css/achievements.css",
+        "css/social.css"
       ],
       "matches": [
         "*://*.somtoday.nl/*",
@@ -67,7 +76,9 @@
         "settings_content/familiar.html",
         "fonts/Kanit-SemiBold.ttf",
         "fonts/Kanit-ExtraLight.ttf",
-        "images/dark-mode.svg"
+        "images/dark-mode.svg",
+        "wasm/pkg/somtoday_analytics_bg.wasm",
+        "wasm/pkg/somtoday_analytics.js"
       ],
       "matches": [
         "*://*.somtoday.nl/*"
